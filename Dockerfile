@@ -17,8 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Make startup script executable
-RUN chmod +x start.sh
+# Make startup scripts executable
+RUN chmod +x start.sh smart_start.py
 
 # Create output directory
 RUN mkdir -p output
@@ -40,4 +40,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/ || exit 1
 
 # Run the application
-CMD ["./start.sh"]
+CMD ["python3", "smart_start.py"]
