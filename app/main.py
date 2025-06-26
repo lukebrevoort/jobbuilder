@@ -57,6 +57,12 @@ async def notion_webhook(request: Request, background_tasks: BackgroundTasks):
         logger.info(f"Received webhook from Notion")
         logger.info(f"Payload keys: {list(payload.keys())}")
         
+        # Debug: Log payload structure (first 1000 chars to avoid huge logs)
+        payload_str = json.dumps(payload, indent=2)
+        logger.info(f"Payload preview: {payload_str[:1000]}...")
+        if len(payload_str) > 1000:
+            logger.info(f"Payload truncated, full length: {len(payload_str)} characters")
+        
         # Validate webhook (basic validation for now)
         if not payload:
             raise HTTPException(status_code=400, detail="Empty payload")
@@ -154,51 +160,128 @@ def extract_job_data_from_payload(payload: dict) -> JobData:
         company_name = ""
         job_description = ""
         
-        # Extract job title - handle corrupted JSON
+        # Extract job title - robust extraction with fallbacks
         if "Job Title" in properties:
             title_prop = properties["Job Title"]
-            logger.info(f"Job Title property: {title_prop}")
+            logger.info(f"Job Title property type: {title_prop.get('type')}")
             
             if title_prop.get("type") == "title" and title_prop.get("title"):
-                # Handle array of title objects
                 title_items = title_prop["title"]
-                if title_items and len(title_items) > 0:
-                    # Try to get plain_text first, fallback to content
-                    first_item = title_items[0]
-                    job_title = first_item.get("plain_text") or first_item.get("text", {}).get("content", "")
+                if isinstance(title_items, list) and len(title_items) > 0:
+                    for item in title_items:
+                        if isinstance(item, dict):
+                            # Try multiple extraction methods
+                            job_title = (
+                                item.get("plain_text") or
+                                item.get("text", {}).get("content") or
+                                ""
+                            )
+                            if job_title:
+                                break
+                    logger.info(f"Extracted job title: '{job_title}'")
         
-        # Extract company name
+        # Extract company name - robust extraction with fallbacks  
         if "Company" in properties:
             company_prop = properties["Company"]
-            logger.info(f"Company property: {company_prop}")
+            logger.info(f"Company property type: {company_prop.get('type')}")
             
+            # Handle both rich_text and title types
+            text_items = None
             if company_prop.get("type") == "rich_text" and company_prop.get("rich_text"):
-                rich_text_items = company_prop["rich_text"]
-                if rich_text_items and len(rich_text_items) > 0:
-                    first_item = rich_text_items[0]
-                    company_name = first_item.get("plain_text") or first_item.get("text", {}).get("content", "")
+                text_items = company_prop["rich_text"]
+            elif company_prop.get("type") == "title" and company_prop.get("title"):
+                text_items = company_prop["title"]
+                
+            if isinstance(text_items, list) and len(text_items) > 0:
+                for item in text_items:
+                    if isinstance(item, dict):
+                        company_name = (
+                            item.get("plain_text") or
+                            item.get("text", {}).get("content") or
+                            ""
+                        )
+                        if company_name:
+                            break
+                logger.info(f"Extracted company name: '{company_name}'")
         
-        # Extract job description
+        # Extract job description - robust extraction
         if "Job Description" in properties:
             desc_prop = properties["Job Description"]
             logger.info(f"Job Description property type: {desc_prop.get('type')}")
             
             if desc_prop.get("type") == "rich_text" and desc_prop.get("rich_text"):
                 rich_text_items = desc_prop["rich_text"]
-                if rich_text_items and len(rich_text_items) > 0:
-                    # Combine all rich text items
+                if isinstance(rich_text_items, list):
                     description_parts = []
                     for item in rich_text_items:
-                        text_content = item.get("plain_text") or item.get("text", {}).get("content", "")
-                        if text_content:
-                            description_parts.append(text_content)
+                        if isinstance(item, dict):
+                            text_content = (
+                                item.get("plain_text") or
+                                item.get("text", {}).get("content") or
+                                ""
+                            )
+                            if text_content:
+                                description_parts.append(text_content)
                     job_description = " ".join(description_parts)
+                    logger.info(f"Extracted job description length: {len(job_description)}")
         
-        logger.info(f"Extracted - Title: '{job_title}', Company: '{company_name}', Description length: {len(job_description)}")
+        # Fallback: Try alternative property names
+        if not job_title:
+            # Try "Name", "Title", or other variations
+            for alt_key in ["Name", "Title", "Position", "Role"]:
+                if alt_key in properties:
+                    logger.info(f"Trying alternative title field: {alt_key}")
+                    alt_prop = properties[alt_key]
+                    if alt_prop.get("title") or alt_prop.get("rich_text"):
+                        # Use same extraction logic
+                        items = alt_prop.get("title") or alt_prop.get("rich_text", [])
+                        if isinstance(items, list) and len(items) > 0:
+                            for item in items:
+                                if isinstance(item, dict):
+                                    job_title = (
+                                        item.get("plain_text") or
+                                        item.get("text", {}).get("content") or
+                                        ""
+                                    )
+                                    if job_title:
+                                        logger.info(f"Found title in {alt_key}: '{job_title}'")
+                                        break
+                    if job_title:
+                        break
         
-        # Create JobData if we have at least title and company
-        if job_title and company_name:
-            # Use a default description if none provided
+        if not company_name:
+            # Try "Organization", "Employer", etc.
+            for alt_key in ["Organization", "Employer", "Company Name"]:
+                if alt_key in properties:
+                    logger.info(f"Trying alternative company field: {alt_key}")
+                    alt_prop = properties[alt_key]
+                    if alt_prop.get("rich_text") or alt_prop.get("title"):
+                        items = alt_prop.get("rich_text") or alt_prop.get("title", [])
+                        if isinstance(items, list) and len(items) > 0:
+                            for item in items:
+                                if isinstance(item, dict):
+                                    company_name = (
+                                        item.get("plain_text") or
+                                        item.get("text", {}).get("content") or
+                                        ""
+                                    )
+                                    if company_name:
+                                        logger.info(f"Found company in {alt_key}: '{company_name}'")
+                                        break
+                    if company_name:
+                        break
+        
+        logger.info(f"Final extraction - Title: '{job_title}', Company: '{company_name}', Description length: {len(job_description)}")
+        
+        # Create JobData if we have at least title OR company
+        if job_title or company_name:
+            # Use fallbacks for missing data
+            if not job_title:
+                job_title = "Position"
+                logger.warning("No job title found, using default")
+            if not company_name:
+                company_name = "Company"
+                logger.warning("No company name found, using default")
             if not job_description:
                 job_description = f"Position: {job_title} at {company_name}"
                 logger.warning("No job description found, using default")
@@ -210,12 +293,15 @@ def extract_job_data_from_payload(payload: dict) -> JobData:
                 notion_page_id=notion_page_id
             )
         else:
-            logger.error(f"Missing required data - Title: '{job_title}', Company: '{company_name}'")
+            logger.error("Could not extract job title or company name from payload")
+            # Log all property names and types for debugging
+            for prop_name, prop_data in properties.items():
+                logger.error(f"Property '{prop_name}': type={prop_data.get('type')}, keys={list(prop_data.keys())}")
             return None
         
     except Exception as e:
         logger.error(f"Error extracting job data: {str(e)}")
-        logger.error(f"Payload structure: {json.dumps(payload, indent=2)[:500]}...")
+        logger.error(f"Full payload for debugging: {json.dumps(payload, indent=2)}")
         return None
 
 @app.get("/jobs/status/{page_id}")
