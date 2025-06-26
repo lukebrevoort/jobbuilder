@@ -1,0 +1,106 @@
+{
+  "personal_info": {
+    "full_name": "Your Full Name",
+    "email": "your.email@example.com",
+    "phone": "(555) 123-4567",
+    "address": "Your City, State 12345",
+    "linkedin_url": "https://linkedin.com/in/yourprofile",
+    "github_url": "https://github.com/yourusername",
+    "professional_summary": "Experienced software developer with 5+ years of experience building scalable web applications and leading development teams. Passionate about clean code, user experience, and continuous learning."
+  },
+  "experience": [
+    {
+      "title": "Senior Software Developer",
+      "company": "Tech Company Inc.",
+      "location": "San Francisco, CA",
+      "start_date": "2021-06",
+      "end_date": "Present",
+      "description": "Lead developer for customer-facing web applications serving 100K+ users. Collaborated with cross-functional teams to deliver high-quality software solutions.",
+      "achievements": [
+        "Improved application performance by 40% through code optimization and caching strategies",
+        "Led migration from monolithic to microservices architecture",
+        "Mentored 3 junior developers and conducted code reviews",
+        "Implemented CI/CD pipelines reducing deployment time by 60%"
+      ]
+    },
+    {
+      "title": "Full Stack Developer",
+      "company": "Startup Solutions",
+      "location": "Austin, TX",
+      "start_date": "2019-03",
+      "end_date": "2021-05",
+      "description": "Developed and maintained multiple client projects using modern web technologies. Worked directly with clients to gather requirements and deliver solutions.",
+      "achievements": [
+        "Built 15+ responsive web applications from scratch",
+        "Integrated third-party APIs and payment systems",
+        "Reduced bug reports by 30% through comprehensive testing",
+        "Collaborated with design team to improve user experience"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Bachelor of Science in Computer Science",
+      "school": "University of Technology",
+      "location": "Austin, TX",
+      "graduation_date": "2019-05",
+      "gpa": "3.7"
+    }
+  ],
+  "skills": [
+    "JavaScript",
+    "Python",
+    "React",
+    "Node.js",
+    "TypeScript",
+    "SQL",
+    "PostgreSQL",
+    "MongoDB",
+    "AWS",
+    "Docker",
+    "Kubernetes",
+    "Git",
+    "REST APIs",
+    "GraphQL",
+    "HTML/CSS",
+    "Vue.js",
+    "Express.js",
+    "FastAPI",
+    "Redis",
+    "Jenkins",
+    "Terraform",
+    "Agile/Scrum"
+  ],
+  "projects": [
+    {
+      "name": "Task Management Platform",
+      "description": "Full-stack web application for team task management with real-time collaboration features",
+      "technologies": ["React", "Node.js", "PostgreSQL", "Socket.io", "AWS"],
+      "url": "https://github.com/yourusername/task-manager"
+    },
+    {
+      "name": "E-commerce API",
+      "description": "RESTful API for e-commerce platform with payment processing and inventory management",
+      "technologies": ["Python", "FastAPI", "PostgreSQL", "Stripe API", "Docker"],
+      "url": "https://github.com/yourusername/ecommerce-api"
+    },
+    {
+      "name": "Weather Dashboard",
+      "description": "Interactive weather dashboard with location-based forecasts and historical data visualization",
+      "technologies": ["Vue.js", "D3.js", "OpenWeather API", "Chart.js"],
+      "url": "https://github.com/yourusername/weather-dashboard"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "AWS Certified Solutions Architect",
+      "issuer": "Amazon Web Services",
+      "date": "2022-08"
+    },
+    {
+      "name": "Certified Kubernetes Administrator",
+      "issuer": "Cloud Native Computing Foundation",
+      "date": "2021-11"
+    }
+  ]
+}

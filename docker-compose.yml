@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  jobbuilder:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - DEBUG=false
+    env_file:
+      - .env
+    volumes:
+      - ./output:/app/output
+      - ./data:/app/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    command: ["ollama", "serve"]
+
+volumes:
+  ollama_data:
