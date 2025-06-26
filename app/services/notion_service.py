@@ -45,8 +45,17 @@ class NotionService:
             
             if "Status" in properties:
                 status_prop = properties["Status"]
-                if status_prop.get("type") == "select" and status_prop.get("select"):
+                prop_type = status_prop.get("type")
+                
+                if prop_type == "select" and status_prop.get("select"):
                     status = status_prop["select"]["name"]
+                elif prop_type == "status" and status_prop.get("status"):
+                    status = status_prop["status"]["name"]
+                elif prop_type == "multi_select" and status_prop.get("multi_select"):
+                    # Take first status if multiple
+                    multi_select = status_prop["multi_select"]
+                    if multi_select:
+                        status = multi_select[0]["name"]
             
             return {
                 "status": status,
@@ -95,9 +104,24 @@ class NotionService:
                     }
                 elif status_type == "status":
                     # Handle native status property type
+                    # For status properties, we need to match against available options
+                    # Try to map common status names to your available options
+                    status_mapping = {
+                        "Applied": "Applied",
+                        "In Progress": "In progress", 
+                        "Complete": "Done",
+                        "Completed": "Done",
+                        "Not Started": "Not started",
+                        "Not started": "Not started",
+                        "Done": "Done"
+                    }
+                    
+                    # Use mapping if available, otherwise use the status as-is
+                    mapped_status = status_mapping.get(status, status)
+                    
                     properties["Status"] = {
                         "status": {
-                            "name": status
+                            "name": mapped_status
                         }
                     }
                 elif status_type == "rich_text":
@@ -156,10 +180,23 @@ class NotionService:
             # Try a simpler update with just the status
             try:
                 logger.info("Attempting simplified status update...")
+                
+                # Map status name to match your Notion options
+                status_mapping = {
+                    "Applied": "Applied",
+                    "In Progress": "In progress", 
+                    "Complete": "Done",
+                    "Completed": "Done",
+                    "Not Started": "Not started",
+                    "Not started": "Not started",
+                    "Done": "Done"
+                }
+                mapped_status = status_mapping.get(status, status)
+                
                 simple_properties = {
                     "Status": {
                         "status": {
-                            "name": status
+                            "name": mapped_status
                         }
                     }
                 }

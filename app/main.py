@@ -131,7 +131,7 @@ async def process_job_application(payload: dict):
         # Update Notion with completion status
         await notion_service.update_job_status(
             job_data.notion_page_id,
-            status="Generated",
+            status="Applied",
             files=[cover_letter_path, resume_path]
         )
         
