@@ -54,17 +54,27 @@ async def notion_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
         # Get raw payload
         payload = await request.json()
-        logger.info(f"Received webhook payload: {json.dumps(payload, indent=2)}")
+        logger.info(f"Received webhook from Notion")
+        logger.info(f"Payload keys: {list(payload.keys())}")
         
         # Validate webhook (basic validation for now)
         if not payload:
             raise HTTPException(status_code=400, detail="Empty payload")
+        
+        # Quick validation of payload structure
+        page_data = payload.get("data", payload)
+        if not page_data.get("properties"):
+            logger.warning("No properties found in payload")
+            return {"status": "ignored", "message": "No properties in payload"}
         
         # Process the job application in background
         background_tasks.add_task(process_job_application, payload)
         
         return {"status": "accepted", "message": "Job application processing started"}
         
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in webhook payload: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
     except Exception as e:
         logger.error(f"Webhook error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
@@ -128,47 +138,84 @@ async def process_job_application(payload: dict):
 def extract_job_data_from_payload(payload: dict) -> JobData:
     """
     Extract job data from Notion webhook payload
-    This will need to be customized based on your Notion database structure
+    Handles both direct page data and automation webhook format
     """
     try:
-        # This is a simplified extraction - adjust based on your Notion database schema
-        properties = payload.get("properties", {})
+        # Handle automation webhook format (has 'data' wrapper)
+        page_data = payload.get("data", payload)
+        
+        properties = page_data.get("properties", {})
+        notion_page_id = page_data.get("id", "")
+        
+        logger.info(f"Extracting from page ID: {notion_page_id}")
+        logger.info(f"Available properties: {list(properties.keys())}")
         
         job_title = ""
         company_name = ""
         job_description = ""
-        notion_page_id = payload.get("id", "")
         
-        # Extract job title
+        # Extract job title - handle corrupted JSON
         if "Job Title" in properties:
             title_prop = properties["Job Title"]
+            logger.info(f"Job Title property: {title_prop}")
+            
             if title_prop.get("type") == "title" and title_prop.get("title"):
-                job_title = title_prop["title"][0]["plain_text"]
+                # Handle array of title objects
+                title_items = title_prop["title"]
+                if title_items and len(title_items) > 0:
+                    # Try to get plain_text first, fallback to content
+                    first_item = title_items[0]
+                    job_title = first_item.get("plain_text") or first_item.get("text", {}).get("content", "")
         
         # Extract company name
         if "Company" in properties:
             company_prop = properties["Company"]
+            logger.info(f"Company property: {company_prop}")
+            
             if company_prop.get("type") == "rich_text" and company_prop.get("rich_text"):
-                company_name = company_prop["rich_text"][0]["plain_text"]
+                rich_text_items = company_prop["rich_text"]
+                if rich_text_items and len(rich_text_items) > 0:
+                    first_item = rich_text_items[0]
+                    company_name = first_item.get("plain_text") or first_item.get("text", {}).get("content", "")
         
         # Extract job description
         if "Job Description" in properties:
             desc_prop = properties["Job Description"]
+            logger.info(f"Job Description property type: {desc_prop.get('type')}")
+            
             if desc_prop.get("type") == "rich_text" and desc_prop.get("rich_text"):
-                job_description = desc_prop["rich_text"][0]["plain_text"]
+                rich_text_items = desc_prop["rich_text"]
+                if rich_text_items and len(rich_text_items) > 0:
+                    # Combine all rich text items
+                    description_parts = []
+                    for item in rich_text_items:
+                        text_content = item.get("plain_text") or item.get("text", {}).get("content", "")
+                        if text_content:
+                            description_parts.append(text_content)
+                    job_description = " ".join(description_parts)
         
-        if job_title and company_name and job_description:
+        logger.info(f"Extracted - Title: '{job_title}', Company: '{company_name}', Description length: {len(job_description)}")
+        
+        # Create JobData if we have at least title and company
+        if job_title and company_name:
+            # Use a default description if none provided
+            if not job_description:
+                job_description = f"Position: {job_title} at {company_name}"
+                logger.warning("No job description found, using default")
+            
             return JobData(
                 job_title=job_title,
                 company_name=company_name,
                 job_description=job_description,
                 notion_page_id=notion_page_id
             )
-        
-        return None
+        else:
+            logger.error(f"Missing required data - Title: '{job_title}', Company: '{company_name}'")
+            return None
         
     except Exception as e:
         logger.error(f"Error extracting job data: {str(e)}")
+        logger.error(f"Payload structure: {json.dumps(payload, indent=2)[:500]}...")
         return None
 
 @app.get("/jobs/status/{page_id}")
