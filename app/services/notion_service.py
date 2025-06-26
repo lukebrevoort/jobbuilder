@@ -65,25 +65,70 @@ class NotionService:
             return False
         
         try:
+            # First, get the current page to understand the property structure
+            page = self.client.pages.retrieve(page_id=page_id)
+            current_properties = page.get("properties", {})
+            
             # Prepare properties to update
-            properties = {
-                "Status": {
-                    "select": {
-                        "name": status
+            properties = {}
+            
+            # Handle Status field - try different formats
+            if "Status" in current_properties:
+                status_prop = current_properties["Status"]
+                status_type = status_prop.get("type", "")
+                
+                logger.info(f"Status property type: {status_type}")
+                
+                if status_type == "select":
+                    properties["Status"] = {
+                        "select": {
+                            "name": status
+                        }
                     }
-                },
-                "Application Generated": {
+                elif status_type == "multi_select":
+                    properties["Status"] = {
+                        "multi_select": [
+                            {
+                                "name": status
+                            }
+                        ]
+                    }
+                elif status_type == "status":
+                    # Handle native status property type
+                    properties["Status"] = {
+                        "status": {
+                            "name": status
+                        }
+                    }
+                elif status_type == "rich_text":
+                    properties["Status"] = {
+                        "rich_text": [
+                            {
+                                "text": {
+                                    "content": status
+                                }
+                            }
+                        ]
+                    }
+                else:
+                    logger.warning(f"Unknown status property type: {status_type}")
+            
+            # Handle Application Generated checkbox
+            if "Application Generated" in current_properties:
+                properties["Application Generated"] = {
                     "checkbox": True
-                },
-                "Generated Date": {
+                }
+            
+            # Handle Generated Date  
+            if "Generated Date" in current_properties:
+                properties["Generated Date"] = {
                     "date": {
                         "start": self._get_current_date()
                     }
                 }
-            }
             
-            # Add file information if provided
-            if files:
+            # Handle Generated Files
+            if files and "Generated Files" in current_properties:
                 file_names = [os.path.basename(f) for f in files]
                 properties["Generated Files"] = {
                     "rich_text": [
@@ -95,11 +140,41 @@ class NotionService:
                     ]
                 }
             
+            logger.info(f"Updating page {page_id} with properties: {list(properties.keys())}")
+            
             # Update the page
             self.client.pages.update(
                 page_id=page_id,
                 properties=properties
             )
+            
+            logger.info(f"Updated Notion page {page_id} with status: {status}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating job status: {str(e)}")
+            # Try a simpler update with just the status
+            try:
+                logger.info("Attempting simplified status update...")
+                simple_properties = {
+                    "Status": {
+                        "status": {
+                            "name": status
+                        }
+                    }
+                }
+                
+                self.client.pages.update(
+                    page_id=page_id,
+                    properties=simple_properties
+                )
+                
+                logger.info(f"Simplified update successful for page {page_id}")
+                return True
+                
+            except Exception as e2:
+                logger.error(f"Simplified update also failed: {str(e2)}")
+                return False
             
             logger.info(f"Updated Notion page {page_id} with status: {status}")
             return True
