@@ -13,6 +13,7 @@ from .services.notion_service import NotionService
 from .services.ai_service import AIService
 from .services.template_service import TemplateService
 from .services.pdf_service import PDFService
+from .services.markdown_service import MarkdownService
 
 # Load environment variables
 load_dotenv()
@@ -32,6 +33,7 @@ notion_service = NotionService()
 ai_service = AIService()
 template_service = TemplateService()
 pdf_service = PDFService()
+markdown_service = MarkdownService()
 
 # Create output directory if it doesn't exist
 os.makedirs(os.getenv("OUTPUT_DIR", "./output"), exist_ok=True)
@@ -109,31 +111,71 @@ async def process_job_application(payload: dict):
         logger.info("Customizing resume...")
         resume_data = await ai_service.customize_resume(job_data)
         
-        # Create PDF documents
-        logger.info("Creating PDF documents...")
-        output_dir = os.getenv("OUTPUT_DIR", "./output")
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Get output format preference from environment
+        output_format = os.getenv("OUTPUT_FORMAT", "markdown").lower()
         
-        # Generate cover letter PDF
-        cover_letter_path = os.path.join(
-            output_dir, 
-            f"cover_letter_{job_data.company_name.replace(' ', '_')}_{timestamp}.pdf"
-        )
-        pdf_service.create_cover_letter_pdf(cover_letter, job_data, cover_letter_path)
-        
-        # Generate resume PDF
-        resume_path = os.path.join(
-            output_dir,
-            f"resume_{job_data.company_name.replace(' ', '_')}_{timestamp}.pdf"
-        )
-        pdf_service.create_resume_pdf(resume_data, job_data, resume_path)
-        
-        # Update Notion with completion status
-        await notion_service.update_job_status(
-            job_data.notion_page_id,
-            status="Applied",
-            files=[cover_letter_path, resume_path]
-        )
+        if output_format == "markdown":
+            # Create markdown documents and store in Notion
+            logger.info("Creating markdown documents...")
+            
+            # Generate cover letter markdown
+            cover_letter_markdown = markdown_service.create_cover_letter_markdown(cover_letter, job_data)
+            
+            # Generate resume markdown
+            resume_markdown = markdown_service.create_resume_markdown(resume_data, job_data)
+            
+            # Create child pages in Notion
+            logger.info("Creating Notion pages...")
+            
+            # Create cover letter page
+            cover_letter_title = f"Cover Letter - {job_data.company_name}"
+            cover_letter_page_id = await notion_service.create_child_page(
+                job_data.notion_page_id, 
+                cover_letter_title, 
+                cover_letter_markdown
+            )
+            
+            # Create resume page
+            resume_title = f"Resume - {job_data.company_name}"
+            resume_page_id = await notion_service.create_child_page(
+                job_data.notion_page_id, 
+                resume_title, 
+                resume_markdown
+            )
+            
+            # Update Notion with completion status
+            await notion_service.update_job_status(
+                job_data.notion_page_id,
+                status="Applied",
+                files=[cover_letter_title, resume_title]
+            )
+            
+        else:
+            # Create PDF documents (legacy behavior)
+            logger.info("Creating PDF documents...")
+            output_dir = os.getenv("OUTPUT_DIR", "./output")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Generate cover letter PDF
+            cover_letter_path = os.path.join(
+                output_dir, 
+                f"cover_letter_{job_data.company_name.replace(' ', '_')}_{timestamp}.pdf"
+            )
+            pdf_service.create_cover_letter_pdf(cover_letter, job_data, cover_letter_path)
+            
+            # Generate resume PDF
+            resume_path = os.path.join(
+                output_dir,
+                f"resume_{job_data.company_name.replace(' ', '_')}_{timestamp}.pdf"
+            )
+            pdf_service.create_resume_pdf(resume_data, job_data, resume_path)
+            
+            # Update Notion with completion status
+            await notion_service.update_job_status(
+                job_data.notion_page_id,
+                status="Applied",
+                files=[cover_letter_path, resume_path]
+            )
         
         logger.info(f"Job application processing completed for {job_data.company_name}")
         
@@ -336,7 +378,8 @@ async def health_check():
         "services": {
             "notion": notion_service.is_healthy(),
             "ai": ai_service.is_healthy(),
-            "pdf": pdf_service.is_healthy()
+            "pdf": pdf_service.is_healthy(),
+            "markdown": markdown_service.is_healthy()
         },
         "timestamp": datetime.now().isoformat()
     }
