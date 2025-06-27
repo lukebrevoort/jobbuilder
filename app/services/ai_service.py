@@ -89,17 +89,26 @@ class AIService:
             # Start with base resume
             customized_resume = self.base_resume.copy()
             
-            # Reorder skills to prioritize matching ones
-            matching_skills = self._extract_matching_skills(job_data)
-            all_skills = customized_resume.get("skills", [])
+            # Get matching skills for prioritization
+            job_desc_lower = job_data.job_description.lower()
+            my_skills = self.base_resume.get("skills", [])
             
-            # Put matching skills first
+            matching_skills = []
+            for skill in my_skills:
+                if skill.lower() in job_desc_lower:
+                    matching_skills.append(skill)
+            
+            # Reorder skills to prioritize matching ones
+            all_skills = customized_resume.get("skills", [])
             prioritized_skills = matching_skills + [skill for skill in all_skills if skill not in matching_skills]
             customized_resume["skills"] = prioritized_skills[:15]  # Limit to top 15 skills
             
             # Customize professional summary
             original_summary = customized_resume.get("personal_info", {}).get("professional_summary", "")
-            customized_summary = f"{original_summary} Particularly interested in {job_data.job_title} roles with expertise in {', '.join(matching_skills[:3])}."
+            if matching_skills:
+                customized_summary = f"{original_summary} Particularly interested in {job_data.job_title} roles with expertise in {', '.join(matching_skills[:3])}."
+            else:
+                customized_summary = f"{original_summary} Excited about the {job_data.job_title} opportunity at {job_data.company_name}."
             
             if "personal_info" not in customized_resume:
                 customized_resume["personal_info"] = {}
@@ -124,8 +133,8 @@ class AIService:
         
         return f"My experience as {recent_experience.get('title', 'a professional')} at {recent_experience.get('company', 'my previous role')}"
     
-    def _extract_matching_skills(self, job_data: JobData) -> list:
-        """Extract skills that match the job description"""
+    def _extract_matching_skills(self, job_data: JobData) -> str:
+        """Extract skills that match the job description and format as markdown list"""
         job_desc_lower = job_data.job_description.lower()
         my_skills = self.base_resume.get("skills", [])
         
@@ -134,7 +143,16 @@ class AIService:
             if skill.lower() in job_desc_lower:
                 matching_skills.append(skill)
         
-        return matching_skills[:10]  # Return top 10 matching skills
+        if not matching_skills:
+            # If no exact matches, return top skills
+            matching_skills = my_skills[:5]
+        
+        # Format as markdown list
+        if matching_skills:
+            skills_list = "\n".join([f"- **{skill}**" for skill in matching_skills[:8]])
+            return f"\n{skills_list}\n"
+        else:
+            return "\n- **Professional experience** in relevant technologies\n"
     
     def _generate_company_connection(self, job_data: JobData) -> str:
         """Generate a connection to the company"""
@@ -145,13 +163,26 @@ class AIService:
         """Get the cover letter template"""
         return """Dear Hiring Manager,
 
-I am writing to express my strong interest in the {job_title} position at {company_name}. {relevant_experience} aligns perfectly with the requirements outlined in your job posting.
+I am writing to express my strong interest in the **{job_title}** position at **{company_name}**. {relevant_experience} aligns perfectly with the requirements outlined in your job posting.
 
-In my previous roles, I have developed expertise in {skills_match}, which I believe would be valuable for this position. {company_connection}
+## Why I'm a Great Fit
 
-I would welcome the opportunity to discuss how my background and enthusiasm can contribute to {company_name}'s continued success. Thank you for your consideration.
+In my previous roles, I have developed expertise in:
+{skills_match}
 
-Sincerely,
+These skills directly translate to the requirements for this position and would allow me to contribute immediately to your team.
+
+## About {company_name}
+
+{company_connection}
+
+## Next Steps
+
+I would welcome the opportunity to discuss how my background and enthusiasm can contribute to {company_name}'s continued success. I'm excited about the possibility of joining your team and am available for an interview at your convenience.
+
+Thank you for your consideration.
+
+**Sincerely,**  
 {full_name}"""
     
     def _get_default_personal_info(self) -> Dict[str, Any]:
