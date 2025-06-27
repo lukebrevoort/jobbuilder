@@ -1,19 +1,22 @@
+Luke Brevoort
+luke@brevoort.com
+720-862-5457
+luke.brevoort.com
+
+June 26, 2025
+
 Dear Hiring Manager,
 
-I am writing to express my strong interest in the {job_title} position at {company_name}. With my background in software development and passion for creating innovative solutions, I am confident that I would be a valuable addition to your team.
+I am a Computer Science sophomore at Stevens Institute of Technology, writing to express my strong interest in the Software Engineering Intern position with the MOATS program at Lockheed Martin Space. I am excited about the opportunity to contribute to mission-critical operational systems that help keep people safe and solve complex challenges.
 
-In my current role as a Senior Software Developer, I have gained extensive experience in {relevant_technologies} and have successfully delivered multiple projects that align with the requirements outlined in your job posting. My experience includes:
+My academic foundation directly aligns with your prerequisites, with coursework in Data Structures and Algorithms, Certified Ethical Hacking, and Fundamentals of Linux and Unix. I have developed strong skills in object-oriented programming and Linux OS environments. I have extensive hands-on experience with Java through my coursework and have worked with debugging and troubleshooting in my personal projects, including my Assignment Tracker, which monitors Canvas APIs and handles real-time data processing challenges.
 
-• Building scalable web applications serving thousands of users
-• Working with cross-functional teams to deliver high-quality software solutions
-• Implementing best practices for code quality, testing, and deployment
-• Mentoring junior developers and conducting code reviews
+My research experience as a Research Assistant in Stevens’ Natural Language Processing Lab has strengthened my collaborative skills and exposed me to mission-critical software development. Working with multilingual LLM systems and international news datasets has taught me the importance of precise software implementation and thorough testing. Additionally, my role as Assistant Vice President of Finance in Student Government has honed my ability to work with leaders across diverse backgrounds, similar to collaborating with individuals across the full program lifecycle mentioned in your job description.
 
-What particularly excites me about this opportunity at {company_name} is {company_specific_interest}. I believe my technical expertise combined with my collaborative approach would enable me to contribute meaningfully to your team's success.
+What particularly excites me about this opportunity is the chance to work on real-time software troubleshooting and perform maintenance activities on systems that have a genuine impact. My experience building automated systems, such as my GitHub Actions pipeline, demonstrates my ability to diagnose issues and implement efficient solutions. I am eager to apply these problem-solving skills to Java environments while contributing to Lockheed Martin’s mission of purposeful innovation.
 
-I have attached my resume for your review and would welcome the opportunity to discuss how my background and enthusiasm can contribute to {company_name}'s continued growth and innovation.
-
-Thank you for your time and consideration. I look forward to hearing from you.
+As a dedicated student maintaining a 3.96 GPA while balancing research, leadership roles, and technical projects, I am prepared to bring the same level of commitment and attention to detail to this internship. I would welcome the opportunity to discuss how my technical background and collaborative experience can contribute to the MOATS program. Thank you for your consideration.
 
 Sincerely,
-{your_name}
+Luke Brevoort
+
